@@ -1,14 +1,13 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, viewsets
-from rest_framework.exceptions import ValidationError
+from rest_framework import filters, viewsets, mixins
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (
-    IsAuthenticated, IsAuthenticatedOrReadOnly
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 )
 
-from api.paginators import CustomLimitOffsetPagination
 from api.permissions import IsAuthor
 from api.serializers import (
-    CommentSerializer, GroupSerializer, PostSerializer, FollowSerializer
+    CommentSerializer, FollowSerializer, GroupSerializer, PostSerializer
 )
 from posts.models import Group, Post, User
 
@@ -18,7 +17,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsAuthor]
-    pagination_class = None
 
     def get_queryset(self):
         return self.get_post().comments.all()
@@ -35,8 +33,7 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    pagination_class = None
+    permission_classes = [AllowAny]
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -45,18 +42,19 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsAuthor]
-    pagination_class = CustomLimitOffsetPagination
+    pagination_class = LimitOffsetPagination
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class FollowViewSet(
+    mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
+):
     """Вьюсет Follow."""
 
     serializer_class = FollowSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
     filter_backends = (filters.SearchFilter,)
     search_fields = ('following__username',)
 
@@ -67,15 +65,5 @@ class FollowViewSet(viewsets.ModelViewSet):
         return self.get_subscriber().subscribers.all()
 
     def perform_create(self, serializer):
-        publisher_name = self.request.data.get('following')
-        if not publisher_name:
-            raise ValidationError('"following" обязательно для заполнения.')
-        try:
-            publisher = User.objects.get(username=publisher_name)
-            if self.get_queryset().exists():
-                raise ValidationError('Вы уже подписаны.')
-            if self.request.user == publisher:
-                raise ValidationError('Нельзя подписываться на себя.')
-            serializer.save(user=self.request.user, following=publisher)
-        except User.DoesNotExist:
-            raise ValidationError('Автор не найден.')
+        publisher = serializer.validated_data.get('following')
+        serializer.save(user=self.request.user, following=publisher)

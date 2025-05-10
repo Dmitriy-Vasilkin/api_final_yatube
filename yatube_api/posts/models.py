@@ -42,6 +42,14 @@ class Follow(models.Model):
         verbose_name='Автор'
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'following'],
+                name='unique_user_following'
+            )
+        ]
+
     def __str__(self):
         return f'{self.user} подписан на {self.following}'
 
@@ -77,6 +85,7 @@ class Post(models.Model):
         verbose_name = 'Публикация'
         verbose_name_plural = 'Публикации'
         default_related_name = 'posts'
+        ordering = ['-pub_date']
 
     def __str__(self):
         return Truncator(self.text).chars(CHARS_QUANTITY)

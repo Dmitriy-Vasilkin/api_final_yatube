@@ -12,8 +12,11 @@ router_api_v1.register(
     r'posts/(?P<post_id>\d+)/comments', CommentViewSet, basename='comments'
 )
 
+path_api_v1 = [
+    path('', include(router_api_v1.urls)),
+    path('', include('djoser.urls.jwt')),
+]
+
 urlpatterns = [
-    path('v1/', include(router_api_v1.urls)),
-    path('v1/', include('djoser.urls')),
-    path('v1/', include('djoser.urls.jwt')),
+    path('v1/', include(path_api_v1)),
 ]
