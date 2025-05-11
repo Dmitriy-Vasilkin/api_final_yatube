@@ -9,7 +9,7 @@ from api.permissions import IsAuthor
 from api.serializers import (
     CommentSerializer, FollowSerializer, GroupSerializer, PostSerializer
 )
-from posts.models import Group, Post, User
+from posts.models import Group, Post
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -58,12 +58,8 @@ class FollowViewSet(
     filter_backends = (filters.SearchFilter,)
     search_fields = ('following__username',)
 
-    def get_subscriber(self):
-        return get_object_or_404(User, username=self.request.user)
-
     def get_queryset(self):
-        return self.get_subscriber().subscribers.all()
+        return self.request.user.subscribers.all()
 
     def perform_create(self, serializer):
-        publisher = serializer.validated_data.get('following')
-        serializer.save(user=self.request.user, following=publisher)
+        serializer.save(user=self.request.user)

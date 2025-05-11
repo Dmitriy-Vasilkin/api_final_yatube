@@ -175,3 +175,5 @@ Authorization: Bearer <JWT_токен>
     "user": "user"
 }
 ```
+
+# Разработал Василькин Д.Н.
